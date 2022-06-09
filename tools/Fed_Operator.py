@@ -18,13 +18,16 @@ def quantize_server(model_dict):
         # quantize the ternary layer in the global model
         if Args.model is 'MLP' and 'ternary' in key:
             print(key)
+            # equation 11
             d2 = kernel.size(0) * kernel.size(1)
             delta = 0.05 * kernel.abs().sum() / d2
             tmp1 = (kernel.abs() > delta).sum()
             tmp2 = ((kernel.abs() > delta) * kernel.abs()).sum()
             w_p = tmp2 / tmp1
+            # Equation 15 / 16
             a = (kernel > delta).float()
             b = (kernel < -delta).float()
+            # quantizize as in EQ22
             kernel = w_p * a - w_p * b
             model_dict[key] = kernel
         elif Args.model is not 'MLP' and 'ternary' and 'conv' in key:
@@ -49,10 +52,13 @@ def ServerUpdate(w, num_samp):
     :param num_samp: number of data on each client, np.array
     :return:
     '''
-
+    # Contributation by client
     num_samp = np.array(num_samp)
+    # fractional contribution
     frac_c = num_samp / num_samp.sum()
+    # number of clients participatiuon
     num_model = len(w)
+    # weight the weights by client contribution for strategy 2
     w_avg = w[0]
     for key, value in w_avg.items():
         for i in range(0, num_model):
@@ -60,7 +66,7 @@ def ServerUpdate(w, num_samp):
                 w_avg[key] = frac_c[0] * w[0][key]
             else:
                 w_avg[key] += frac_c[i] * w[i][key]
-
+    # copy and quantizise for strategy 1
     backup_w = copy.deepcopy(w_avg)
 
     ter_avg = quantize_server(backup_w)

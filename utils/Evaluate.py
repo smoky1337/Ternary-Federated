@@ -8,24 +8,25 @@ def accuracy(true, pred, top_k=(1,)):
 
     _, pred = pred.topk(max_k, 1)
     pred = pred.t()
-    correct = pred.eq(true.view(1, -1).expand_as(pred))
+    correct = pred.eq(true.reshape(1, -1).expand_as(pred))
 
     result = []
     for k in top_k:
-        correct_k = correct[:k].view(-1).float().sum(0)
+        correct_k = correct[:k].reshape(-1).float().sum(0)
         result.append(correct_k.div_(batch_size).item())
 
     return result
 
 
 def evaluate(model, loss, val_iterator, args):
+    # enable eval mode (turn off dropout, batch norm)
     model.eval()
     model = model.to(args.device)
     loss_value = 0.0
     acc = 0.0
     top5_acc = 0.0
     total_samples = 0
-
+    # eval disregarding gradients
     with torch.no_grad():
         for x_batch, y_batch in val_iterator:
             x_batch = x_batch.to(args.device)

@@ -13,27 +13,33 @@ def quantize(kernel, w_p, args):
     """
     :return quantized weights of a certain layer, which is: w_p * [1, 0, -1].
     """
+
+    # Equation 9
     prob = np.random.rand()
     if prob > 0.5:
         T_k = args.T_thresh + 0.01 * prob
     else:
         T_k = args.T_thresh + 0.01 * 0.5
 
+    # Equation 8
     if args.ada_thresh is False:
         delta = T_k * kernel.abs().max()
+    # Equation 10 / 11
     else:
+        # Set by paper, p 4, under EQ11
         T_a = 0.07
         d2 = kernel.size(0) * kernel.size(1)
         delta = T_a * kernel.abs().sum() / d2
-
+        # Equation 12/13 -> 15/16
         tmp1 = (kernel.abs() > delta).sum()
         tmp2 = ((kernel.abs() > delta)*kernel.abs()).sum()
+        # Quantization factor
         w_p = tmp2 / tmp1
 
-
+    # positive and negative index matrices as in 15 and 16
     a = (kernel > delta).float()
     b = (kernel < -delta).float()
-
+    # Equation 36
     return w_p*a + (-w_p*b)
 
 
